@@ -1,0 +1,12 @@
+numpy
+pandas
+torch
+scikit-learn
+tqdm
+matplotlib
+seaborn
+plotly
+geopandas
+shapely
+folium
+scipy
