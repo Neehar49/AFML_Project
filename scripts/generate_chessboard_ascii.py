@@ -1,6 +1,7 @@
 """Generate an ASCII chess board with starting positions using 11x11 tiles."""
 from argparse import ArgumentParser
 from pathlib import Path
+import sys
 
 TILES = {
     "EMPTY_WHITE": [
@@ -458,8 +459,16 @@ def main():
     )
     parser.add_argument(
         "--output",
-        type=Path,
-        help="Optional output path. Defaults to start board or FEN board file depending on input.",
+        type=str,
+        help=(
+            "Optional output path. Use '-' to print the board to stdout. "
+            "Defaults to start board or FEN board file depending on input."
+        ),
+    )
+    parser.add_argument(
+        "--print",
+        action="store_true",
+        help="Also print the generated board to stdout after writing to a file.",
     )
     args = parser.parse_args()
 
@@ -471,9 +480,18 @@ def main():
         default_output = Path("data/chess_board_start.txt")
 
     ascii_board = render_board(board) + "\n"
-    out_path = args.output or default_output
+
+    if args.output == "-":
+        print(ascii_board, end="")
+        return
+
+    out_path = Path(args.output) if args.output else default_output
     out_path.write_text(ascii_board)
-    print(f"Wrote {out_path}")
+
+    if args.print:
+        print(ascii_board, end="")
+
+    print(f"Wrote {out_path}", file=sys.stderr)
 
 
 if __name__ == "__main__":
