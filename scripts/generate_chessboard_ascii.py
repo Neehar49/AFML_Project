@@ -407,7 +407,7 @@ def render_board(board):
 
 def main():
     board = starting_board()
-    ascii_board = render_board(board)
+    ascii_board = render_board(board) + "\n"
     out_path = Path("data/chess_board_start.txt")
     out_path.write_text(ascii_board)
     print(f"Wrote {out_path}")
