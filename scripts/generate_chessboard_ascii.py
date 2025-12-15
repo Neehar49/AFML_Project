@@ -1,0 +1,498 @@
+"""Generate an ASCII chess board with starting positions using 11x11 tiles."""
+from argparse import ArgumentParser
+from pathlib import Path
+import sys
+
+TILES = {
+    "EMPTY_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+    ],
+    "EMPTY_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+    ],
+    "W_KING_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        ".....+.....",
+        "....███....",
+        "...█████...",
+        "....███....",
+        "...█████...",
+        "...█████...",
+        "..███████..",
+    ],
+    "W_KING_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "     +     ",
+        "    ███    ",
+        "   █████   ",
+        "    ███    ",
+        "   █████   ",
+        "   █████   ",
+        "  ███████  ",
+    ],
+    "W_QUEEN_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "....<*>....",
+        "....███....",
+        "...█████...",
+        "....███....",
+        "...█████...",
+        "...█████...",
+        "..███████..",
+    ],
+    "W_QUEEN_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "    <*>    ",
+        "    ███    ",
+        "   █████   ",
+        "    ███    ",
+        "   █████   ",
+        "   █████   ",
+        "  ███████  ",
+    ],
+    "W_BISHOP_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "....███....",
+        "...█/███...",
+        "...█████...",
+        "....███....",
+        "....███....",
+        "...█████...",
+        "..███████..",
+    ],
+    "W_BISHOP_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "    ███    ",
+        "   █/███   ",
+        "   █████   ",
+        "    ███    ",
+        "    ███    ",
+        "   █████   ",
+        "  ███████  ",
+    ],
+    "W_KNIGHT_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        ".....N.....",
+        "...██/█....",
+        "..██████...",
+        "..██.......",
+        "..████.....",
+        "..██████...",
+        "..███████..",
+    ],
+    "W_KNIGHT_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "     N     ",
+        "   ██/█    ",
+        "  ██████   ",
+        "  ██       ",
+        "  ████     ",
+        "  ██████   ",
+        "  ███████  ",
+    ],
+    "W_ROOK_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...█ █ █...",
+        "...█████...",
+        "....███....",
+        "....███....",
+        "...█████...",
+        "..███████..",
+    ],
+    "W_ROOK_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "   █ █ █   ",
+        "   █████   ",
+        "    ███    ",
+        "    ███    ",
+        "   █████   ",
+        "  ███████  ",
+    ],
+    "W_PAWN_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "....███....",
+        "...███|█...",
+        "...███|█...",
+        "....███....",
+        "...█████...",
+        "..███████..",
+    ],
+    "W_PAWN_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "    ███    ",
+        "   ███|█   ",
+        "   ███|█   ",
+        "    ███    ",
+        "   █████   ",
+        "  ███████  ",
+    ],
+    "B_KING_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        ".....+.....",
+        "....┃┃┃....",
+        "...┃┃┃┃┃...",
+        "....┃┃┃....",
+        "...┃┃┃┃┃...",
+        "...┃┃┃┃┃...",
+        "..┃┃┃┃┃┃┃..",
+    ],
+    "B_KING_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "     +     ",
+        "    ┃┃┃    ",
+        "   ┃┃┃┃┃   ",
+        "    ┃┃┃    ",
+        "   ┃┃┃┃┃   ",
+        "   ┃┃┃┃┃   ",
+        "  ┃┃┃┃┃┃┃  ",
+    ],
+    "B_QUEEN_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "....<*>....",
+        "....┃┃┃....",
+        "...┃┃┃┃┃...",
+        "....┃┃┃....",
+        "...┃┃┃┃┃...",
+        "...┃┃┃┃┃...",
+        "..┃┃┃┃┃┃┃..",
+    ],
+    "B_QUEEN_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "    <*>    ",
+        "    ┃┃┃    ",
+        "   ┃┃┃┃┃   ",
+        "    ┃┃┃    ",
+        "   ┃┃┃┃┃   ",
+        "   ┃┃┃┃┃   ",
+        "  ┃┃┃┃┃┃┃  ",
+    ],
+    "B_BISHOP_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "....┃┃┃....",
+        "...┃/┃┃┃...",
+        "...┃┃┃┃┃...",
+        "....┃┃┃....",
+        "....┃┃┃....",
+        "...┃┃┃┃┃...",
+        "..┃┃┃┃┃┃┃..",
+    ],
+    "B_BISHOP_BLACK": [
+        "           ",
+        "           ",
+        "           ",        
+        "           ",
+        "    ┃┃┃    ",
+        "   ┃/┃┃┃   ",
+        "   ┃┃┃┃┃   ",
+        "    ┃┃┃    ",
+        "    ┃┃┃    ",
+        "   ┃┃┃┃┃   ",
+        "  ┃┃┃┃┃┃┃  ",
+    ],
+    "B_KNIGHT_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        ".....N.....",
+        "...┃┃/┃....",
+        "..┃┃┃┃┃┃...",
+        "..┃┃.......",
+        "..┃┃┃┃.....",
+        "..┃┃┃┃┃┃...",
+        "..┃┃┃┃┃┃┃..",
+    ],
+    "B_KNIGHT_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "     N     ",
+        "   ┃┃/┃    ",
+        "  ┃┃┃┃┃┃   ",
+        "  ┃┃       ",
+        "  ┃┃┃┃     ",
+        "  ┃┃┃┃┃┃   ",
+        "  ┃┃┃┃┃┃┃  ",
+    ],
+    "B_ROOK_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...┃ ┃ ┃...",
+        "...┃┃┃┃┃...",
+        "....┃┃┃....",
+        "....┃┃┃....",
+        "...┃┃┃┃┃...",
+        "..┃┃┃┃┃┃┃..",
+    ],
+    "B_ROOK_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "   ┃ ┃ ┃   ",
+        "   ┃┃┃┃┃   ",
+        "    ┃┃┃    ",
+        "    ┃┃┃    ",
+        "   ┃┃┃┃┃   ",
+        "  ┃┃┃┃┃┃┃  ",
+    ],
+    "B_PAWN_WHITE": [
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        "....┃┃┃....",
+        "...┃┃┃|┃...",
+        "...┃┃┃|┃...",
+        "....┃┃┃....",
+        "...┃┃┃┃┃...",
+        "..┃┃┃┃┃┃┃..",
+    ],
+    "B_PAWN_BLACK": [
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "           ",
+        "    ┃┃┃    ",
+        "   ┃┃┃|┃   ",
+        "   ┃┃┃|┃   ",
+        "    ┃┃┃    ",
+        "   ┃┃┃┃┃   ",
+        "  ┃┃┃┃┃┃┃  ",
+    ],
+}
+
+FILES = {
+    ("b", "king"): ("B_KING_WHITE", "B_KING_BLACK"),
+    ("b", "queen"): ("B_QUEEN_WHITE", "B_QUEEN_BLACK"),
+    ("b", "rook"): ("B_ROOK_WHITE", "B_ROOK_BLACK"),
+    ("b", "bishop"): ("B_BISHOP_WHITE", "B_BISHOP_BLACK"),
+    ("b", "knight"): ("B_KNIGHT_WHITE", "B_KNIGHT_BLACK"),
+    ("b", "pawn"): ("B_PAWN_WHITE", "B_PAWN_BLACK"),
+    ("w", "king"): ("W_KING_WHITE", "W_KING_BLACK"),
+    ("w", "queen"): ("W_QUEEN_WHITE", "W_QUEEN_BLACK"),
+    ("w", "rook"): ("W_ROOK_WHITE", "W_ROOK_BLACK"),
+    ("w", "bishop"): ("W_BISHOP_WHITE", "W_BISHOP_BLACK"),
+    ("w", "knight"): ("W_KNIGHT_WHITE", "W_KNIGHT_BLACK"),
+    ("w", "pawn"): ("W_PAWN_WHITE", "W_PAWN_BLACK"),
+}
+
+
+def square_color(file_index: int, rank_index: int) -> str:
+    """Return 'white' or 'black' for the square background.
+
+    Files and ranks are zero-indexed from the white player's perspective,
+    with file_index 0 corresponding to column 'a' and rank_index 0 to rank 1.
+    """
+    return "white" if (file_index + rank_index) % 2 == 0 else "black"
+
+
+def starting_board():
+    rank8 = ["b_rook", "b_knight", "b_bishop", "b_queen", "b_king", "b_bishop", "b_knight", "b_rook"]
+    rank7 = ["b_pawn"] * 8
+    empty = [None] * 8
+    rank2 = ["w_pawn"] * 8
+    rank1 = ["w_rook", "w_knight", "w_bishop", "w_queen", "w_king", "w_bishop", "w_knight", "w_rook"]
+    return [rank8, rank7, empty, empty, empty, empty, rank2, rank1]
+
+
+PIECES_BY_FEN = {
+    "k": "b_king",
+    "q": "b_queen",
+    "r": "b_rook",
+    "b": "b_bishop",
+    "n": "b_knight",
+    "p": "b_pawn",
+    "K": "w_king",
+    "Q": "w_queen",
+    "R": "w_rook",
+    "B": "w_bishop",
+    "N": "w_knight",
+    "P": "w_pawn",
+}
+
+
+def board_from_fen(fen: str):
+    """Parse a FEN string into the board representation used for rendering."""
+
+    fen_board = fen.split()[0]
+    ranks = fen_board.split("/")
+    if len(ranks) != 8:
+        raise ValueError("FEN must contain 8 ranks")
+
+    board = []
+    for rank in ranks:
+        rank_entries = []
+        for symbol in rank:
+            if symbol.isdigit():
+                rank_entries.extend([None] * int(symbol))
+                continue
+
+            piece = PIECES_BY_FEN.get(symbol)
+            if piece is None:
+                raise ValueError(f"Unrecognized FEN symbol: {symbol}")
+            rank_entries.append(piece)
+
+        if len(rank_entries) != 8:
+            raise ValueError(f"Rank '{rank}' does not contain 8 files once expanded")
+        board.append(rank_entries)
+
+    return board
+
+
+def tile_for(square_piece, file_idx, rank_idx):
+    color = square_color(file_idx, rank_idx)
+    if square_piece is None:
+        key = "EMPTY_WHITE" if color == "white" else "EMPTY_BLACK"
+        return TILES[key]
+
+    player, piece = square_piece.split("_", 1)
+    tile_keys = FILES[(player[0], piece)]
+    key = tile_keys[0] if color == "white" else tile_keys[1]
+    return TILES[key]
+
+
+def render_board(board):
+    top = "++" + "=" * 88 + "++"
+    rail = "++" + "-" * 88 + "++"
+    lines = [top, rail]
+
+    for rank_idx, rank in enumerate(board):
+        tile_rows = ["" for _ in range(11)]
+        board_rank_index = 7 - rank_idx  # convert to white's perspective (rank 1 index 0)
+        for file_idx, square_piece in enumerate(rank):
+            tile = tile_for(square_piece, file_idx, board_rank_index)
+            for i, tile_line in enumerate(tile):
+                tile_rows[i] += tile_line
+        lines.extend(["||" + row + "||" for row in tile_rows])
+    lines.extend([rail, top])
+    return "\n".join(lines)
+
+
+def main():
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--fen",
+        help="Generate a board from a specific FEN position instead of the starting position.",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        help=(
+            "Optional output path. Use '-' to print the board to stdout. "
+            "Defaults to start board or FEN board file depending on input."
+        ),
+    )
+    parser.add_argument(
+        "--print",
+        action="store_true",
+        help="Also print the generated board to stdout after writing to a file.",
+    )
+    args = parser.parse_args()
+
+    if args.fen:
+        board = board_from_fen(args.fen)
+        default_output = Path("data/chess_board_fen.txt")
+    else:
+        board = starting_board()
+        default_output = Path("data/chess_board_start.txt")
+
+    ascii_board = render_board(board) + "\n"
+
+    if args.output == "-":
+        print(ascii_board, end="")
+        return
+
+    out_path = Path(args.output) if args.output else default_output
+    out_path.write_text(ascii_board)
+
+    if args.print:
+        print(ascii_board, end="")
+
+    print(f"Wrote {out_path}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
