@@ -1,4 +1,5 @@
 """Generate an ASCII chess board with starting positions using 11x11 tiles."""
+from argparse import ArgumentParser
 from pathlib import Path
 
 TILES = {
@@ -376,6 +377,50 @@ def starting_board():
     return [rank8, rank7, empty, empty, empty, empty, rank2, rank1]
 
 
+PIECES_BY_FEN = {
+    "k": "b_king",
+    "q": "b_queen",
+    "r": "b_rook",
+    "b": "b_bishop",
+    "n": "b_knight",
+    "p": "b_pawn",
+    "K": "w_king",
+    "Q": "w_queen",
+    "R": "w_rook",
+    "B": "w_bishop",
+    "N": "w_knight",
+    "P": "w_pawn",
+}
+
+
+def board_from_fen(fen: str):
+    """Parse a FEN string into the board representation used for rendering."""
+
+    fen_board = fen.split()[0]
+    ranks = fen_board.split("/")
+    if len(ranks) != 8:
+        raise ValueError("FEN must contain 8 ranks")
+
+    board = []
+    for rank in ranks:
+        rank_entries = []
+        for symbol in rank:
+            if symbol.isdigit():
+                rank_entries.extend([None] * int(symbol))
+                continue
+
+            piece = PIECES_BY_FEN.get(symbol)
+            if piece is None:
+                raise ValueError(f"Unrecognized FEN symbol: {symbol}")
+            rank_entries.append(piece)
+
+        if len(rank_entries) != 8:
+            raise ValueError(f"Rank '{rank}' does not contain 8 files once expanded")
+        board.append(rank_entries)
+
+    return board
+
+
 def tile_for(square_piece, file_idx, rank_idx):
     color = square_color(file_idx, rank_idx)
     if square_piece is None:
@@ -406,9 +451,27 @@ def render_board(board):
 
 
 def main():
-    board = starting_board()
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--fen",
+        help="Generate a board from a specific FEN position instead of the starting position.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional output path. Defaults to start board or FEN board file depending on input.",
+    )
+    args = parser.parse_args()
+
+    if args.fen:
+        board = board_from_fen(args.fen)
+        default_output = Path("data/chess_board_fen.txt")
+    else:
+        board = starting_board()
+        default_output = Path("data/chess_board_start.txt")
+
     ascii_board = render_board(board) + "\n"
-    out_path = Path("data/chess_board_start.txt")
+    out_path = args.output or default_output
     out_path.write_text(ascii_board)
     print(f"Wrote {out_path}")
 
